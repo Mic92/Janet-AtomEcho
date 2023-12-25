@@ -36,7 +36,7 @@ class AudioFileSourceHTTPSStream : public AudioFileSource
 
   public:
     AudioFileSourceHTTPSStream();
-    AudioFileSourceHTTPSStream(const char *url, const char* root_ca);
+    AudioFileSourceHTTPSStream(const char *url, const std::string body, const char* root_ca);
     virtual ~AudioFileSourceHTTPSStream() override;
     
     virtual bool open(const char *url) override;
@@ -54,14 +54,16 @@ class AudioFileSourceHTTPSStream : public AudioFileSource
 
   private:
     virtual uint32_t readInternal(void *data, uint32_t len, bool nonBlock);
-//    WiFiClient client;
-    WiFiClientSecure client;
+    WiFiClient client;
+    //WiFiClientSecure client;
     HTTPClient http;
+    int chunkSize;
     int pos;
     int size;
     int reconnectTries;
     int reconnectDelayMs;
     char saveURL[128];
+    std::string saveBody;
     const char* rootCACertificate;
 };
 

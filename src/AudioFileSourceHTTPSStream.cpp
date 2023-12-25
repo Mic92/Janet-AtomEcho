@@ -27,13 +27,15 @@ AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream()
 {
   pos = 0;
   reconnectTries = 0;
+  chunkSize = -1;
   saveURL[0] = 0;
 }
 
-AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const char* root_ca)
+AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const std::string body, const char* root_ca): saveBody(body)
 {
   saveURL[0] = 0;
   reconnectTries = 0;
+  chunkSize = -1;
   rootCACertificate = root_ca;
   open(url);
 }
@@ -41,13 +43,13 @@ AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const ch
 bool AudioFileSourceHTTPSStream::open(const char *url)
 {
   pos = 0;
-  client.setCACert(rootCACertificate);
+  //client.setCACert(rootCACertificate);
   http.begin(client, url);
   http.setReuse(true);
 #ifndef ESP32
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
 #endif
-  int code = http.GET();
+  int code = http.POST((uint8_t*)saveBody.c_str(), saveBody.length());
   if (code != HTTP_CODE_OK) {
     http.end();
     cb.st(STATUS_HTTPFAIL, PSTR("Can't open HTTP request"));
@@ -81,6 +83,19 @@ uint32_t AudioFileSourceHTTPSStream::readNonBlock(void *data, uint32_t len)
   }
   return readInternal(data, len, true);
 //  return readInternal(data, len, false);
+}
+
+void printHexdump(const uint8_t *data, uint32_t len) {
+  for (uint32_t i=0; i<len; i++) {
+    Serial.printf("%02x ", data[i]);
+  }
+  // Print the text
+  for (uint32_t i=0; i<len; i++) {
+    if (isprint(data[i])) Serial.printf("%c", data[i]);
+    else Serial.print(".");
+  }
+  Serial.println("");
+
 }
 
 uint32_t AudioFileSourceHTTPSStream::readInternal(void *data, uint32_t len, bool nonBlock)
@@ -124,10 +139,48 @@ retry:
   }
   if (avail == 0) return 0;
   if (avail < len) len = avail;
+  int totalRead = 0;
 
-  int read = stream->read(reinterpret_cast<uint8_t*>(data), len);
-  pos += read;
-  return read;
+  while (len > 0) {
+     if (chunkSize < 0) {
+       // Read the chunk size
+       char buff[16];
+       int read = stream->readBytesUntil('\n', buff, sizeof(buff));
+       if (read <= 0) {
+         cb.st(STATUS_NODATA, PSTR("No chunk size data available"));
+         http.end();
+         goto retry;
+       }
+       buff[read-1] = 0;
+       chunkSize = strtol(buff, NULL, 16);
+       if (chunkSize == 0) {
+         // End of stream
+         http.end();
+         return 0;
+       }
+     }
+
+     int maxLen = chunkSize > len ? len : chunkSize;
+     int read = stream->read(reinterpret_cast<uint8_t*>(data), maxLen);
+     pos += read;
+     data = reinterpret_cast<uint8_t*>(data) + read;
+     chunkSize -= read;
+     len -= read;
+     totalRead += read;
+
+     if (chunkSize == 0) {
+       // Read the trailing \r\n
+       char buff[2];
+       stream->readBytes(buff, 2);
+       if (buff[0] != '\r' || buff[1] != '\n') {
+         audioLogger->printf_P(PSTR("ERROR! AudioFileSourceHTTPSStream::readInternal failed to read trailing \\r\\n\n"));
+         return 0;
+       }
+       chunkSize = -1;
+     }
+  }
+
+  return totalRead;
 }
 
 bool AudioFileSourceHTTPSStream::seek(int32_t pos, int dir)

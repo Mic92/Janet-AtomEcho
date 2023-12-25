@@ -4,7 +4,7 @@
 #include <AudioOutput.h>
 #include "AudioFileSourceICYStream.h"
 #include "AudioFileSourceBuffer.h"
-#include "AudioGeneratorMP3.h"
+#include "AudioGeneratorWAV.h"
 #include "AudioOutputM5Speaker.h"
 #include "AudioFileSourceHTTPSStream.h"
 #include "WebVoiceVoxTTS.h"
@@ -20,39 +20,31 @@
 #include <deque>
 #include <FastLED.h>
 
-const char *SSID = "YOUR_WIFI_SSID";
-const char *PASSWORD = "YOUR_WIFI_PASSWORD";
+const char *SSID = "";
+const char *PASSWORD = "";
 
-// LEDストリップのピン番号
+// Pin number for the LED strip
 #define LED_PIN     27
-// LEDストリップのLED数
+// Number of LEDs in the LED strip
 #define NUM_LEDS    1
-// 明るさ
+// Brightness
 #define BRIGHTNESS 180
-// LEDストリップの色の並び順
+// Color order of the LED strip
 #define COLOR_ORDER GRB
-// FastLEDライブラリの初期化
+// Initialization of the FastLED library
 CRGB leds[NUM_LEDS];
 
-// 保存する質問と回答の最大数
+// Maximum number of saved questions and answers
 const int MAX_HISTORY = 5;
 
-// 過去の質問と回答を保存するデータ構造
+// Data structure to store past questions and answers
 std::deque<String> chatHistory;
 
-#define OPENAI_APIKEY "SET YOUR OPENAI APIKEY"
-#define VOICEVOX_APIKEY "SET YOUR VOICEVOX APIKEY"
-#define STT_APIKEY "SET YOUR STT APIKEY"
+#define OPENAI_APIKEY ""
 
 //---------------------------------------------
 String OPENAI_API_KEY = "";
-String VOICEVOX_API_KEY = "";
-String STT_API_KEY = "";
-String TTS_SPEAKER_NO = "3";
-String TTS_SPEAKER = "&speaker=";
-String TTS_PARMS = TTS_SPEAKER + TTS_SPEAKER_NO;
-
-const char *URL="http://gitfile.oss-cn-beijing.aliyuncs.com/11-fanfare.mp3";
+String TTS_VOICE = "en-us-libritts-high.onnx";
 
 // CRGB::Pink
 // CRGB::Yellow
@@ -70,7 +62,7 @@ void set_led_color(CRGB col){
 /// set M5Speaker virtual channel (0-7)
 static constexpr uint8_t m5spk_virtual_channel = 0;
 static AudioOutputM5Speaker out(&M5.Speaker, m5spk_virtual_channel);
-AudioGeneratorMP3 *mp3;
+AudioGeneratorWAV *wav;
 AudioFileSourceICYStream *file;
 AudioFileSourceBuffer *buff;
 
@@ -109,10 +101,10 @@ String https_post_json(const char* url, const char* json_string, const char* roo
   if(client) {
     client -> setCACert(root_ca);
     {
-      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is 
+      // Add a scoping block for HTTPClient https to make sure it is destroyed before WiFiClientSecure *client is
       HTTPClient https;
-      https.setTimeout( 65000 ); 
-  
+      https.setTimeout( 65000 );
+
       Serial.print("[HTTPS] begin...\n");
       if (https.begin(*client, url)) {  // HTTPS
         Serial.print("[HTTPS] POST...\n");
@@ -120,12 +112,12 @@ String https_post_json(const char* url, const char* json_string, const char* roo
         https.addHeader("Content-Type", "application/json");
         https.addHeader("Authorization", String("Bearer ") + OPENAI_API_KEY);
         int httpCode = https.POST((uint8_t *)json_string, strlen(json_string));
-  
+
         // httpCode will be negative on error
         if (httpCode > 0) {
           // HTTP header has been send and Server response header has been handled
           Serial.printf("[HTTPS] POST... code: %d\n", httpCode);
-  
+
           // file found at server
           if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
             payload = https.getString();
@@ -135,13 +127,13 @@ String https_post_json(const char* url, const char* json_string, const char* roo
           }
         } else {
           Serial.printf("[HTTPS] POST... failed, error: %s\n", https.errorToString(httpCode).c_str());
-        }  
+        }
         https.end();
       } else {
         Serial.printf("[HTTPS] Unable to connect\n");
       }
       // End extra scoping block
-    }  
+    }
     delete client;
   } else {
     Serial.println("Unable to create client");
@@ -167,7 +159,7 @@ Serial.println(json_string);
       Serial.println(error.f_str());
       // avatar.setExpression(Expression::Sad);
       // avatar.setSpeechText("エラーです");
-      response = "エラーです";
+      response = "Got an error";
       delay(1000);
       // avatar.setSpeechText("");
       // avatar.setExpression(Expression::Neutral);
@@ -180,7 +172,7 @@ Serial.println(json_string);
   } else {
     // avatar.setExpression(Expression::Sad);
     // avatar.setSpeechText("わかりません");
-    response = "わかりません";
+    response = "I do not understand";
     delay(1000);
     // avatar.setSpeechText("");
     // avatar.setExpression(Expression::Neutral);
@@ -192,9 +184,7 @@ String exec_chatGPT(String text) {
   static String response = "";
   Serial.println(InitBuffer);
   init_chat_doc(InitBuffer.c_str());
-  // 質問をチャット履歴に追加
   chatHistory.push_back(text);
-   // チャット履歴が最大数を超えた場合、古い質問と回答を削除
   if (chatHistory.size() > MAX_HISTORY * 2)
   {
     chatHistory.pop_front();
@@ -217,7 +207,6 @@ String exec_chatGPT(String text) {
   serializeJson(chat_doc, json_string);
     response = chatGpt(json_string);
 //    speech_text = response;
-    // 返答をチャット履歴に追加
     chatHistory.push_back(response);
   // Serial.printf("chatHistory.max_size %d \n",chatHistory.max_size());
   // Serial.printf("chatHistory.size %d \n",chatHistory.size());
@@ -234,37 +223,23 @@ String exec_chatGPT(String text) {
   return response;
 }
 
-void playMP3(AudioFileSourceBuffer *buff){
-  mp3->begin(buff, &out);
+void playWAV(AudioFileSourceBuffer *buff){
+  wav->begin(buff, &out);
 }
 
-String SpeechToText(bool isGoogle){
+String SpeechToText(){
   Serial.println("\r\nRecord start!\r\n");
 
   String ret = "";
-  if( isGoogle) {
-    Audio* audio = new Audio();
-    audio->Record();  
-    Serial.println("Record end\r\n");
-    Serial.println("音声認識開始");
-    // avatar.setSpeechText("わかりました");  
-    set_led_color(CRGB::Orange);
-    CloudSpeechClient* cloudSpeechClient = new CloudSpeechClient(root_ca_google, STT_API_KEY.c_str());
-    ret = cloudSpeechClient->Transcribe(audio);
-    delete cloudSpeechClient;
-    delete audio;
-  } else {
-    AudioWhisper* audio = new AudioWhisper();
-    audio->Record();  
-    Serial.println("Record end\r\n");
-    Serial.println("音声認識開始");
-//    avatar.setSpeechText("わかりました");  
-    set_led_color(CRGB::Orange);
-    Whisper* cloudSpeechClient = new Whisper(root_ca_openai, OPENAI_API_KEY.c_str());
-    ret = cloudSpeechClient->Transcribe(audio);
-    delete cloudSpeechClient;
-    delete audio;
-  }
+  AudioWhisper* audio = new AudioWhisper();
+  audio->Record();
+  Serial.println("Record end\r\n");
+  //    avatar.setSpeechText("わかりました");
+  set_led_color(CRGB::Orange);
+  Whisper* cloudSpeechClient = new Whisper(root_ca_openai, OPENAI_API_KEY.c_str());
+  ret = cloudSpeechClient->Transcribe(audio);
+  delete cloudSpeechClient;
+  delete audio;
   return ret;
 }
 
@@ -323,26 +298,22 @@ void setup()
   Serial.println("Connecting to WiFi");
   WiFi.disconnect();
   WiFi.softAPdisconnect(true);
-  WiFi.mode(WIFI_STA);  
+  WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PASSWORD);
 
   M5.update();
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("...Connecting to WiFi");
-    delay(1000);   
+    delay(1000);
   }
   Serial.println("Connected");
   set_led_color(CRGB::Black);
 
   OPENAI_API_KEY = OPENAI_APIKEY;
-  VOICEVOX_API_KEY = VOICEVOX_APIKEY;
-  STT_API_KEY = STT_APIKEY;
 
   M5.Speaker.setVolume(200);
 //   audioLogger = &Serial;
-   mp3 = new AudioGeneratorMP3();
-//   mp3->RegisterStatusCB(StatusCallback, (void*)"mp3");
-//   mp3->begin(buff, &out);
+   wav = new AudioGeneratorWAV();
   init_chat_doc(json_ChatString.c_str());
   serializeJson(chat_doc, InitBuffer);
 }
@@ -350,61 +321,44 @@ void setup()
 
 void loop()
 {
-  static int lastms = 0;
-
   M5.update();
   if (M5.BtnA.wasPressed())
   {
     M5.Speaker.tone(1000, 100);
     delay(200);
-    // avatar.setExpression(Expression::Happy);
-    // avatar.setSpeechText("御用でしょうか？");
     set_led_color(CRGB::Magenta);
     M5.Speaker.end();
-    String ret;
-    if(OPENAI_API_KEY != STT_API_KEY){
-      Serial.println("Google STT");
-      ret = SpeechToText(true);
-    } else {
-      Serial.println("Whisper STT");
-      ret = SpeechToText(false);
-    }
-    Serial.println("音声認識終了");
-    Serial.println("音声認識結果");
+    Serial.println("Whisper STT");
+    String ret = SpeechToText();
     M5.Speaker.begin();
     if(ret != "") {
       set_led_color(CRGB::LightGreen);
       Serial.println(ret);
-      if (!mp3->isRunning()) {
+      if (!wav->isRunning()) {
         String response = exec_chatGPT(ret);
         if(response != "") {
           set_led_color(CRGB::Blue);
           //M5.Speaker.begin();
-          Voicevox_tts((char*)response.c_str(), (char*)TTS_PARMS.c_str());             
+          Voicevox_tts((char*)response.c_str(), (char*)TTS_VOICE.c_str());
         }
       }
     } else {
-      Serial.println("音声認識失敗");
-      // avatar.setExpression(Expression::Sad);
-      // avatar.setSpeechText("聞き取れませんでした");
       set_led_color(CRGB::Red);
       delay(2000);
       set_led_color(CRGB::Black);
-      // avatar.setSpeechText("");
-      // avatar.setExpression(Expression::Neutral);
-    } 
-    // M5.Speaker.begin();
+    }
+     M5.Speaker.begin();
   }
 
-  if (mp3->isRunning()) {
-    if (!mp3->loop()) {
-      mp3->stop();
+  if (wav->isRunning()) {
+    if (!wav->loop()) {
+      wav->stop();
       if(file != nullptr){delete file; file = nullptr;}
-      Serial.println("mp3 stop");
-//      avatar.setExpression(Expression::Neutral);
+      if (buff != nullptr){delete buff; buff = nullptr;}
+      Serial.println("wav stop");
       speech_text_buffer = "";
       set_led_color(CRGB::Black);
     }
     delay(1);
-  }//delay(100);
+  }
 }
