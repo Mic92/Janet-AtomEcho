@@ -11,15 +11,14 @@
 #include "CloudSpeechClient.h"
 #include "PiperTTS.h"
 #include "Whisper.h"
-#include "rootCACertificate.h"
 #include "config.h"
+#include "rootCACertificate.h"
 #include <ArduinoJson.h>
 #include <AudioOutput.h>
 #include <FastLED.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <deque>
-
 
 // Pin number for the LED strip
 #define LED_PIN 27
@@ -37,7 +36,6 @@ const int MAX_HISTORY = 5;
 
 // Data structure to store past questions and answers
 std::deque<String> chatHistory;
-
 
 //---------------------------------------------
 String OPENAI_API_KEY = "";
@@ -66,7 +64,6 @@ String speech_text = "";
 String speech_text_buffer = "";
 DynamicJsonDocument chat_doc(1024 * 10);
 String InitBuffer = "";
-
 
 String https_post_json(const char *url, const char *json_string,
                        const char *root_ca) {
@@ -151,7 +148,7 @@ String exec_chatGPT(String text) {
   static String response = "";
   Serial.println(InitBuffer);
   chat_doc.clear();
-  chat_doc["model"] = "gpt-3.5-turbo";
+  chat_doc["model"] = "gpt-4";
 
   chatHistory.push_back(text);
   if (chatHistory.size() > MAX_HISTORY * 2) {
@@ -161,10 +158,12 @@ String exec_chatGPT(String text) {
   chat_doc["messages"] = JsonArray();
   JsonObject systemPrompt = chat_doc["messages"].createNestedObject();
   systemPrompt["role"] = "system";
-  systemPrompt["content"] = "You are Janet, an the informational assistant in The Good Place. "
-     "Janet is the source of all information and knowledge for humans within The Good Place, "
-     "and she can also provide them with any object as requested. "
-     "Janet has a boundless void into which she often retreats.";
+  systemPrompt["content"] =
+      "You are Janet, an the informational assistant in The Good Place. "
+      "Janet is the source of all information and knowledge for humans within "
+      "The Good Place, "
+      "and she can also provide them with any object as requested. "
+      "Janet has a boundless void into which she often retreats.";
 
   for (int i = 0; i < chatHistory.size(); i++) {
     JsonArray messages = chat_doc["messages"];
@@ -291,6 +290,7 @@ void loop() {
     delay(200);
     set_led_color(CRGB::Magenta);
     M5.Speaker.end();
+
     Serial.println("Whisper STT");
     String ret = SpeechToText();
     M5.Speaker.begin();

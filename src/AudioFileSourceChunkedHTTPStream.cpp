@@ -39,6 +39,7 @@ AudioFileSourceChunkedHTTPStream::AudioFileSourceChunkedHTTPStream(const char *u
 bool AudioFileSourceChunkedHTTPStream::open(const char *url)
 {
   pos = 0;
+  http.setTimeout(30000); // piper takes a while to respond
   http.begin(client, url);
   http.setReuse(true);
 #ifndef ESP32
@@ -46,6 +47,7 @@ bool AudioFileSourceChunkedHTTPStream::open(const char *url)
 #endif
   int code = http.POST((uint8_t*)saveBody.c_str(), saveBody.length());
   if (code != HTTP_CODE_OK) {
+    Serial.printf("Piper HTTP POST failed, code %s\n", http.errorToString(code).c_str());
     http.end();
     cb.st(STATUS_HTTPFAIL, PSTR("Can't open HTTP request"));
     return false;
@@ -77,7 +79,6 @@ uint32_t AudioFileSourceChunkedHTTPStream::readNonBlock(void *data, uint32_t len
     return 0;
   }
   return readInternal(data, len, true);
-//  return readInternal(data, len, false);
 }
 
 uint32_t AudioFileSourceChunkedHTTPStream::readInternal(void *data, uint32_t len, bool nonBlock)

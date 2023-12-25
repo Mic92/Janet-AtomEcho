@@ -5,9 +5,6 @@ Janet is the source of all information and knowledge for humans within The Good 
 and she can also provide them with any object as requested.
 Janet has a boundless void into which she often retreats.
 
-
-
-
 ## Dependencies
 
 - [platformio](https://platformio.org)
