@@ -12,6 +12,7 @@
 #include "PiperTTS.h"
 #include "Whisper.h"
 #include "rootCACertificate.h"
+#include "config.h"
 #include <ArduinoJson.h>
 #include <AudioOutput.h>
 #include <FastLED.h>
@@ -19,8 +20,6 @@
 #include <WiFiClientSecure.h>
 #include <deque>
 
-const char *SSID = "";
-const char *PASSWORD = "";
 
 // Pin number for the LED strip
 #define LED_PIN 27
@@ -39,12 +38,9 @@ const int MAX_HISTORY = 5;
 // Data structure to store past questions and answers
 std::deque<String> chatHistory;
 
-#define OPENAI_APIKEY ""
 
 //---------------------------------------------
 String OPENAI_API_KEY = "";
-const char *TTS_VOICE = "en-us-libritts-high.onnx";
-const char *TTS_URL = "http://192.168.178.71:8081/api/tts";
 
 // CRGB::Pink
 // CRGB::Yellow

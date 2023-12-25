@@ -1,0 +1,5 @@
+static const char *SSID = "";
+static const char *PASSWORD = "";
+static const char *TTS_VOICE = "en-us-libritts-high.onnx";
+static const char *TTS_URL = "http://1.2.3.4/api/tts";
+#define OPENAI_APIKEY ""
