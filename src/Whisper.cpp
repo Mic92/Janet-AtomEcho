@@ -7,7 +7,7 @@ constexpr int API_PORT = 443;
 constexpr char* API_PATH = "/v1/audio/transcriptions";
 }  // namespace
 
-Whisper::Whisper(const char* root_ca, const char* api_key) : client(), key(api_key) {
+Whisper::Whisper(const char* root_ca, const char* language, const char* api_key) : client(), language(language), key(api_key) {
   client.setCACert(root_ca);
   client.setTimeout(10000); 
   if (!client.connect(API_HOST, API_PORT)) {
@@ -27,7 +27,7 @@ String Whisper::Transcribe(AudioWhisper* audio) {
   const String header = "--" + String(boundary) + "\r\n"
     "Content-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-1\r\n"
     "--" + String(boundary) + "\r\n"
-    "Content-Disposition: form-data; name=\"language\"\r\n\r\nen\r\n"
+    "Content-Disposition: form-data; name=\"language\"\r\n\r\n" + String(language) + "\r\n"
     "--" + String(boundary) + "\r\n"
     "Content-Disposition: form-data; name=\"file\"; filename=\"speak.wav\"\r\n"
     "Content-Type: application/octet-stream\r\n\r\n";

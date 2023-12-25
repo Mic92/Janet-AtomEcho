@@ -6,8 +6,9 @@
 class Whisper {
   WiFiClientSecure client;
   String key;
+  String language;
 public:
-  Whisper(const char* root_ca, const char* api_key);
+  Whisper(const char* root_ca, const char* language, const char* api_key);
   ~Whisper();
   String Transcribe(AudioWhisper* audio);
 };

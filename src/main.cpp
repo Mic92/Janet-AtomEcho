@@ -158,12 +158,7 @@ String exec_chatGPT(String text) {
   chat_doc["messages"] = JsonArray();
   JsonObject systemPrompt = chat_doc["messages"].createNestedObject();
   systemPrompt["role"] = "system";
-  systemPrompt["content"] =
-      "You are Janet, an the informational assistant in The Good Place. "
-      "Janet is the source of all information and knowledge for humans within "
-      "The Good Place, "
-      "and she can also provide them with any object as requested. "
-      "Janet has a boundless void into which she often retreats.";
+  systemPrompt["content"] = SYSTEM_PROMPT;
 
   for (int i = 0; i < chatHistory.size(); i++) {
     JsonArray messages = chat_doc["messages"];
@@ -200,7 +195,7 @@ String SpeechToText() {
   //    avatar.setSpeechText("わかりました");
   set_led_color(CRGB::Orange);
   Whisper *cloudSpeechClient =
-      new Whisper(root_ca_openai, OPENAI_API_KEY.c_str());
+      new Whisper(root_ca_openai, WHISPER_LANGUAGE, OPENAI_API_KEY.c_str());
   ret = cloudSpeechClient->Transcribe(audio);
   delete cloudSpeechClient;
   delete audio;
