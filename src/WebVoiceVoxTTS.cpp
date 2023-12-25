@@ -1,7 +1,6 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
-#include "WebVoiceVoxRootCA.h"
 #include <AudioGeneratorWAV.h>
 #include <AudioFileSourceBuffer.h>
 #include "AudioFileSourceHTTPSStream.h"
@@ -29,7 +28,7 @@ void Voicevox_tts(char *text,char *voice){
   serializeJson(doc, json_body);
 
   if(tts_url == "") return;
-  file = new AudioFileSourceHTTPSStream(tts_url.c_str(), json_body, root_ca);
+  file = new AudioFileSourceHTTPSStream(tts_url.c_str(), json_body);
   buff = new AudioFileSourceBuffer(file, 10240);
   playWAV(buff);
 }

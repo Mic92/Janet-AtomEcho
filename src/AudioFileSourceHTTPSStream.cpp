@@ -31,19 +31,17 @@ AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream()
   saveURL[0] = 0;
 }
 
-AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const std::string body, const char* root_ca): saveBody(body)
+AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const std::string body): saveBody(body)
 {
   saveURL[0] = 0;
   reconnectTries = 0;
   chunkSize = -1;
-  rootCACertificate = root_ca;
   open(url);
 }
 
 bool AudioFileSourceHTTPSStream::open(const char *url)
 {
   pos = 0;
-  //client.setCACert(rootCACertificate);
   http.begin(client, url);
   http.setReuse(true);
 #ifndef ESP32

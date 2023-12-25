@@ -11,7 +11,6 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include "rootCACertificate.h"
-#include "rootCAgoogle.h"
 #include <ArduinoJson.h>
 #include "AudioWhisper.h"
 #include "Whisper.h"

@@ -36,7 +36,7 @@ class AudioFileSourceHTTPSStream : public AudioFileSource
 
   public:
     AudioFileSourceHTTPSStream();
-    AudioFileSourceHTTPSStream(const char *url, const std::string body, const char* root_ca);
+    AudioFileSourceHTTPSStream(const char *url, const std::string body);
     virtual ~AudioFileSourceHTTPSStream() override;
     
     virtual bool open(const char *url) override;
@@ -64,7 +64,6 @@ class AudioFileSourceHTTPSStream : public AudioFileSource
     int reconnectDelayMs;
     char saveURL[128];
     std::string saveBody;
-    const char* rootCACertificate;
 };
 
 
