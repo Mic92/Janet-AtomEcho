@@ -65,22 +65,8 @@ AudioFileSourceBuffer *buff;
 String speech_text = "";
 String speech_text_buffer = "";
 DynamicJsonDocument chat_doc(1024 * 10);
-String json_ChatString = "{\"model\": \"gpt-3.5-turbo-1106\",\"messages\": "
-                         "[{\"role\": \"user\", \"content\": \""
-                         "\"}]}";
-String Role_JSON = "";
 String InitBuffer = "";
 
-bool init_chat_doc(const char *data) {
-  DeserializationError error = deserializeJson(chat_doc, data);
-  if (error) {
-    Serial.println("DeserializationError");
-    return false;
-  }
-  String json_str;
-  serializeJsonPretty(chat_doc, json_str);
-  return true;
-}
 
 String https_post_json(const char *url, const char *json_string,
                        const char *root_ca) {
@@ -164,12 +150,21 @@ String chatGpt(String json_string) {
 String exec_chatGPT(String text) {
   static String response = "";
   Serial.println(InitBuffer);
-  init_chat_doc(InitBuffer.c_str());
+  chat_doc.clear();
+  chat_doc["model"] = "gpt-3.5-turbo";
+
   chatHistory.push_back(text);
   if (chatHistory.size() > MAX_HISTORY * 2) {
     chatHistory.pop_front();
     chatHistory.pop_front();
   }
+  chat_doc["messages"] = JsonArray();
+  JsonObject systemPrompt = chat_doc["messages"].createNestedObject();
+  systemPrompt["role"] = "system";
+  systemPrompt["content"] = "You are Janet, an the informational assistant in The Good Place. "
+     "Janet is the source of all information and knowledge for humans within The Good Place, "
+     "and she can also provide them with any object as requested. "
+     "Janet has a boundless void into which she often retreats.";
 
   for (int i = 0; i < chatHistory.size(); i++) {
     JsonArray messages = chat_doc["messages"];
@@ -286,7 +281,6 @@ void setup() {
   M5.Speaker.setVolume(200);
   //   audioLogger = &Serial;
   wav = new AudioGeneratorWAV();
-  init_chat_doc(json_ChatString.c_str());
   serializeJson(chat_doc, InitBuffer);
 }
 
