@@ -1,7 +1,7 @@
 /*
   AudioFileSourceHTTPSStream
   Connect to a HTTP based streaming service
-  
+
   Copyright (C) 2017  Earle F. Philhower, III
 
   This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if defined(ESP32) || defined(ESP8266)
 #pragma once
 
 #include <Arduino.h>
@@ -30,15 +29,15 @@
 #endif
 #include "AudioFileSource.h"
 
-class AudioFileSourceHTTPSStream : public AudioFileSource
+class AudioFileSourceChunkedHTTPStream : public AudioFileSource
 {
   friend class AudioFileSourceICYStream;
 
   public:
-    AudioFileSourceHTTPSStream();
-    AudioFileSourceHTTPSStream(const char *url, const std::string body);
-    virtual ~AudioFileSourceHTTPSStream() override;
-    
+    AudioFileSourceChunkedHTTPStream();
+    AudioFileSourceChunkedHTTPStream(const char *url, const std::string body);
+    virtual ~AudioFileSourceChunkedHTTPStream() override;
+
     virtual bool open(const char *url) override;
     virtual uint32_t read(void *data, uint32_t len) override;
     virtual uint32_t readNonBlock(void *data, uint32_t len) override;
@@ -65,7 +64,3 @@ class AudioFileSourceHTTPSStream : public AudioFileSource
     char saveURL[128];
     std::string saveBody;
 };
-
-
-#endif
-

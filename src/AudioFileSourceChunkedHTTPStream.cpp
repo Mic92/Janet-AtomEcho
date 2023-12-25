@@ -1,5 +1,5 @@
 /*
-  AudioFileSourceHTTPSStream
+  AudioFileSourceHTTPStream
   Streaming HTTP source
 
   Copyright (C) 2017  Earle F. Philhower, III
@@ -18,12 +18,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if defined(ESP32) || defined(ESP8266)
+#include "AudioFileSourceChunkedHTTPStream.h"
 
-#include "AudioFileSourceHTTPSStream.h"
-//#include "rootCACertificate.h"
-
-AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream()
+AudioFileSourceChunkedHTTPStream::AudioFileSourceChunkedHTTPStream()
 {
   pos = 0;
   reconnectTries = 0;
@@ -31,7 +28,7 @@ AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream()
   saveURL[0] = 0;
 }
 
-AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const std::string body): saveBody(body)
+AudioFileSourceChunkedHTTPStream::AudioFileSourceChunkedHTTPStream(const char *url, const std::string body): saveBody(body)
 {
   saveURL[0] = 0;
   reconnectTries = 0;
@@ -39,7 +36,7 @@ AudioFileSourceHTTPSStream::AudioFileSourceHTTPSStream(const char *url, const st
   open(url);
 }
 
-bool AudioFileSourceHTTPSStream::open(const char *url)
+bool AudioFileSourceChunkedHTTPStream::open(const char *url)
 {
   pos = 0;
   http.begin(client, url);
@@ -59,44 +56,31 @@ bool AudioFileSourceHTTPSStream::open(const char *url)
   return true;
 }
 
-AudioFileSourceHTTPSStream::~AudioFileSourceHTTPSStream()
+AudioFileSourceChunkedHTTPStream::~AudioFileSourceChunkedHTTPStream()
 {
   http.end();
 }
 
-uint32_t AudioFileSourceHTTPSStream::read(void *data, uint32_t len)
+uint32_t AudioFileSourceChunkedHTTPStream::read(void *data, uint32_t len)
 {
   if (data==NULL) {
-    audioLogger->printf_P(PSTR("ERROR! AudioFileSourceHTTPSStream::read passed NULL data\n"));
+    audioLogger->printf_P(PSTR("ERROR! AudioFileSourceChunkedHTTPStream::read passed NULL data\n"));
     return 0;
   }
   return readInternal(data, len, false);
 }
 
-uint32_t AudioFileSourceHTTPSStream::readNonBlock(void *data, uint32_t len)
+uint32_t AudioFileSourceChunkedHTTPStream::readNonBlock(void *data, uint32_t len)
 {
   if (data==NULL) {
-    audioLogger->printf_P(PSTR("ERROR! AudioFileSourceHTTPSStream::readNonBlock passed NULL data\n"));
+    audioLogger->printf_P(PSTR("ERROR! AudioFileSourceChunkedHTTPStream::readNonBlock passed NULL data\n"));
     return 0;
   }
   return readInternal(data, len, true);
 //  return readInternal(data, len, false);
 }
 
-void printHexdump(const uint8_t *data, uint32_t len) {
-  for (uint32_t i=0; i<len; i++) {
-    Serial.printf("%02x ", data[i]);
-  }
-  // Print the text
-  for (uint32_t i=0; i<len; i++) {
-    if (isprint(data[i])) Serial.printf("%c", data[i]);
-    else Serial.print(".");
-  }
-  Serial.println("");
-
-}
-
-uint32_t AudioFileSourceHTTPSStream::readInternal(void *data, uint32_t len, bool nonBlock)
+uint32_t AudioFileSourceChunkedHTTPStream::readInternal(void *data, uint32_t len, bool nonBlock)
 {
 retry:
   if (!http.connected()) {
@@ -171,7 +155,7 @@ retry:
        char buff[2];
        stream->readBytes(buff, 2);
        if (buff[0] != '\r' || buff[1] != '\n') {
-         audioLogger->printf_P(PSTR("ERROR! AudioFileSourceHTTPSStream::readInternal failed to read trailing \\r\\n\n"));
+         audioLogger->printf_P(PSTR("ERROR! AudioFileSourceChunkedHTTPStream::readInternal failed to read trailing \\r\\n\n"));
          return 0;
        }
        chunkSize = -1;
@@ -181,33 +165,31 @@ retry:
   return totalRead;
 }
 
-bool AudioFileSourceHTTPSStream::seek(int32_t pos, int dir)
+bool AudioFileSourceChunkedHTTPStream::seek(int32_t pos, int dir)
 {
-  audioLogger->printf_P(PSTR("ERROR! AudioFileSourceHTTPSStream::seek not implemented!"));
+  audioLogger->printf_P(PSTR("ERROR! AudioFileSourceChunkedHTTPStream::seek not implemented!"));
   (void) pos;
   (void) dir;
   return false;
 }
 
-bool AudioFileSourceHTTPSStream::close()
+bool AudioFileSourceChunkedHTTPStream::close()
 {
   http.end();
   return true;
 }
 
-bool AudioFileSourceHTTPSStream::isOpen()
+bool AudioFileSourceChunkedHTTPStream::isOpen()
 {
   return http.connected();
 }
 
-uint32_t AudioFileSourceHTTPSStream::getSize()
+uint32_t AudioFileSourceChunkedHTTPStream::getSize()
 {
   return size;
 }
 
-uint32_t AudioFileSourceHTTPSStream::getPos()
+uint32_t AudioFileSourceChunkedHTTPStream::getPos()
 {
   return pos;
 }
-
-#endif
